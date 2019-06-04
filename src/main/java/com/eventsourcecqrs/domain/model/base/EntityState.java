@@ -1,7 +1,5 @@
 package com.eventsourcecqrs.domain.model.base;
 
-import com.eventsourcecqrs.application.command.base.CommandHandlerException;
-
 import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
