@@ -1,9 +1,12 @@
 package com.eventsourcecqrs.domain.model.base;
 
+import com.eventsourcecqrs.application.command.base.CommandHandlerException;
+
 import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Stream;
 
 public abstract class EntityState<I extends UniqueIdentifier> {
 
@@ -19,7 +22,7 @@ public abstract class EntityState<I extends UniqueIdentifier> {
         try {
             Class<?> eventClass = domainEvent.getClass();
             Class<?> entityStateClass = Class.forName(this.getClass().getName());
-            Method method = entityStateClass.getDeclaredMethod("when", eventClass);
+            Method method = getEventApplyMethod(eventClass, entityStateClass);
             method.setAccessible(true);
             method.invoke(this, domainEvent);
             method.setAccessible(false);
@@ -27,5 +30,14 @@ public abstract class EntityState<I extends UniqueIdentifier> {
             throw new IllegalArgumentException(MessageFormat.format("There was an error applying the domain event to the {0} entity.",
                     domainEvent.getClass().getSimpleName()), e);
         }
+    }
+
+    private Method getEventApplyMethod(Class<?> eventClass, Class<?> entityStateClass) {
+        return Stream.of(entityStateClass.getDeclaredMethods())
+                .filter(method -> method.getParameterCount() == 1 && method.getParameterTypes()[0] == eventClass)
+                .findAny()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        MessageFormat.format("It could not find a method with parameter {0} in {1}.",
+                                entityStateClass.getSimpleName(), eventClass.getSimpleName())));
     }
 }

@@ -8,8 +8,10 @@ import com.eventsourcecqrs.domain.model.base.UniqueIdentifier;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 public abstract class CommandHandler<E extends Entity> {
 
@@ -24,7 +26,7 @@ public abstract class CommandHandler<E extends Entity> {
         try {
             Class<?> commandClass = command.getClass();
             Class<?> commandHandlerClass = Class.forName(this.getClass().getName());
-            Method commandHandlerMethodToBeCalled = commandHandlerClass.getDeclaredMethod("handle", commandClass);
+            Method commandHandlerMethodToBeCalled = getCommandHandlerMethod(commandClass, commandHandlerClass);
             commandHandlerMethodToBeCalled.setAccessible(true);
             returnCommandHandler = commandHandlerMethodToBeCalled.invoke(this, command);
             commandHandlerMethodToBeCalled.setAccessible(false);
@@ -33,6 +35,15 @@ public abstract class CommandHandler<E extends Entity> {
         }
         return returnCommandHandler != null ? (ReturnCommandHandler) returnCommandHandler :
                 ReturnCommandHandler.of();
+    }
+
+    private Method getCommandHandlerMethod(Class<?> commandClass, Class<?> commandHandlerClass) {
+        return Stream.of(commandHandlerClass.getDeclaredMethods())
+                        .filter(method -> method.getParameterCount() == 1 && method.getParameterTypes()[0] == commandClass)
+                        .findAny()
+                        .orElseThrow(() -> new CommandHandlerException(
+                                MessageFormat.format("It could not find a method with parameter {0} in {1}.",
+                                        commandHandlerClass.getSimpleName(), commandClass.getSimpleName())));
     }
 
     protected void applyToEntity(UniqueIdentifier id, Consumer consumer) {
