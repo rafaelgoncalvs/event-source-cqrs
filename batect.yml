@@ -1,0 +1,40 @@
+containers:
+  build-env:
+    image: openjdk:8u141-jdk
+    volumes:
+      - local: .
+        container: /code
+        options: cached
+      - local: .maven-cache
+        container: /home/container-user/.m2
+        options: cached
+    working_directory: /code
+    run_as_current_user:
+      enabled: true
+      home_directory: /home/container-user
+
+  event-source-cqrs:
+    build_directory: .
+
+tasks:
+  build:
+    description: Build the application.
+    run:
+      container: build-env
+      command: ./mvnw clean install
+
+  test:
+    description: Run the tests.
+    run:
+      container: build-env
+      command: ./mvnw test
+
+  run:
+    description: Run the application.
+    prerequisites:
+      - build
+    run:
+      container: event-source-cqrs
+      ports:
+        - local: 8080
+          container: 8080

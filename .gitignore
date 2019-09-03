@@ -13,3 +13,6 @@ buildNumber.properties
 
 .idea
 *.iml
+
+### app-specific entries
+.maven-cache
