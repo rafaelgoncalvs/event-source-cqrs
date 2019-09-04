@@ -1,6 +1,6 @@
 containers:
   build-env:
-    image: openjdk:8u141-jdk
+    image: openjdk:8-alpine
     volumes:
       - local: .
         container: /code
@@ -16,21 +16,34 @@ containers:
   event-source-cqrs:
     build_directory: .
 
+  docker-push-env:
+    build_directory: .batect/docker-push-env
+    volumes:
+      - local: .
+        container: /code
+        options: cached
+      - local: /var/run/docker.sock
+        container: /var/run/docker.sock
+    working_directory: /code
+
 tasks:
   build:
     description: Build the application.
+    group: Build tasks
     run:
       container: build-env
       command: ./mvnw clean install
 
   test:
     description: Run the tests.
+    group: Test tasks
     run:
       container: build-env
       command: ./mvnw test
 
   run:
     description: Run the application.
+    group: Run tasks
     prerequisites:
       - build
     run:
@@ -38,3 +51,15 @@ tasks:
       ports:
         - local: 8080
           container: 8080
+
+  pushImage:
+    description: Build and push the production application image to Docker Hub.
+    group: Publishing tasks
+    prerequisites:
+      - build
+    run:
+      container: docker-push-env
+      command: ./.batect/buildAndPushImage.sh
+      environment:
+        DOCKER_USER: $DOCKER_USER
+        DOCKER_PASSWORD: $DOCKER_PASSWORD
